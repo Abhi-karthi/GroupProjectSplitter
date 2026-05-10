@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Project Splitter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body>
+
+<div class="container" id="mainContainer">
+    <h1>Project Splitter</h1>
+    <p class="subtitle">Fairly distribute work in seconds.</p>
+
+    <div id="inputForm" {% if success %}style="display: none;"{% endif %}>
+        <form method="post" enctype="multipart/form-data" id="projectForm">
+            <div class="form-group">
+                <label for="instructions">Assignment Instructions</label>
+                <textarea id="instructions" placeholder="Paste your project requirements, rubric, or prompt here..." name="instructions"></textarea>
+            </div> 
+            
+            <div class="form-group"> 
+                <label for="images">Attach Images (Optional)</label> 
+                <input type="file" id="images" name="images" accept="image/*" multiple style="margin-top: 8px;" onchange="handleFileSelect(event)">
+                <div id="previewContainer" class="preview-container"></div>
+            </div>
+
+            <div class="grid">
+                <div class="form-group">
+                    <label for="deadline">Final Deadline</label>
+                    <input type="date" id="deadline" name="date">
+                </div>
+                <div class="form-group">
+                    <label for="people">Number of People</label>
+                    <input type="number" id="people" min="1" max="10" value="3" name="number">
+                </div>
+            </div>
+
+            <button type="submit">Split Project</button>
+        </form>
+    </div>
+
+    <div id="output" class="{% if success %}output-visible{% endif %}">
+        <h3 style="margin-bottom: 16px;">Assigned Plan:</h3>
+        <div id="resultsList"></div>
+        {% if file_paths %} 
+        <div id="uploadedImages" style="margin-top: 16px;"> 
+            <h4 style="margin-bottom: 8px;">Attached Images:</h4> 
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;"> 
+                {% for path in file_paths %} 
+                <div class="uploaded-image-wrapper" id="img-{{ loop.index }}">
+                    <img src="{{ url_for('static', filename=path.split('static/')[1]) }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border);">
+                    <button class="delete-btn" onclick="deleteFromServer('{{ path }}', 'img-{{ loop.index }}')">×</button>
+                </div>
+                {% endfor %} 
+            </div> 
+        </div> 
+        {% endif %}
+        <button style="background: var(--text-muted); margin-top: 24px;" onclick="resetForm()">Start Over</button>
+    </div>
+</div>
+
+<script> 
+    let selectedFiles = [];
+
+    function handleFileSelect(event) {
+        const files = Array.from(event.target.files);
+        selectedFiles = [...selectedFiles, ...files];
+        updatePreviews();
+        updateFileInput();
+    }
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        updatePreviews();
+        updateFileInput();
+    }
+
+    function updatePreviews() {
+        const container = document.getElementById('previewContainer');
+        container.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `
+                    <img src="${e.target.result}">
+                    <button type="button" class="delete-btn" onclick="removeFile(${index})">×</button>
+                `;
+                container.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function updateFileInput() {
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach(file => dataTransfer.items.add(file));
+        document.getElementById('images').files = dataTransfer.files;
+    }
+
+    function deleteFromServer(filePath, elementId) {
+        if (confirm('Delete this image?')) {
+            fetch('/delete_image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ path: filePath })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(elementId).remove();
+                } else {
+                    alert('Error deleting image: ' + data.error);
+                }
+            });
+        }
+    }
+
+    function resetForm() { 
+        window.location.href = "/"; 
+    } 
+</script>
+</body>
+</html>
