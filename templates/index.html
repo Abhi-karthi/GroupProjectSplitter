@@ -20,15 +20,15 @@
         <p>This usually takes 5-10 seconds.</p>
     </div>
 
-    <div id="inputForm" {% if success %}style="display: none;"{% endif %}>
-        <form method="post" enctype="multipart/form-data" id="projectForm">
+    <div id="inputForm">
+        <form id="projectForm">
             <div class="form-group">
                 <label for="instructions">Assignment Instructions</label>
                 <textarea id="instructions" placeholder="Paste your project requirements, rubric, or prompt here..." name="instructions"></textarea>
-            </div> 
-            
-            <div class="form-group"> 
-                <label for="images">Attach Images (Optional)</label> 
+            </div>
+
+            <div class="form-group">
+                <label for="images">Attach Images (Optional)</label>
                 <input type="file" id="images" name="images" accept="image/*" multiple style="margin-top: 8px;" onchange="handleFileSelect(event)">
                 <div id="previewContainer" class="preview-container"></div>
             </div>
@@ -48,35 +48,74 @@
         </form>
     </div>
 
-    <div id="resultsList">
-    {% if plan %}
-    <div class="plan-grid" style="display: grid; gap: 1rem; margin-top: 1rem;">
-        {% for item in plan %}
-        <div class="plan-card" style="padding: 1rem; border: 1px solid var(--border); border-radius: 8px; background: #f9fafb;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <strong>Student {{ item.student }}</strong>
-                <span class="badge" style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">
-                    Diff: {{ item.difficulty }}/10
-                </span>
-            </div>
-            <p style="margin: 8px 0; color: var(--text-main);">{{ item.task }}</p>
-            <div style="font-size: 0.85rem; color: var(--text-muted);">
-                📅 Internal Deadline: {{ item.deadline }}
-            </div>
-        </div>
-        {% endfor %}
+    <div id="resultsContainer" style="display: none;">
+        <div id="resultsList"></div>
+        <button style="background: var(--text-muted); margin-top: 24px;" onclick="resetForm()">Start Over</button>
     </div>
-    {% endif %}
-</div>
+
 </div>
 
-<script> 
+<script>
     let selectedFiles = [];
 
     document.getElementById('projectForm').addEventListener('submit', function(e) {
-        // Show loading, hide form
+        // 1. Prevent default form submission to stop the page from refreshing
+        e.preventDefault();
+
+        // 2. Hide form and show loading spinner
         document.getElementById('inputForm').style.display = 'none';
         document.getElementById('loadingState').style.display = 'block';
+
+        // 3. Package the data
+        const formData = new FormData(this);
+
+        // 4. Send asynchronous POST request
+        fetch('/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loadingState').style.display = 'none';
+
+            if (data.error) {
+                alert("Error: " + data.error);
+                document.getElementById('inputForm').style.display = 'block';
+                return;
+            }
+
+            // 5. Build HTML dynamically from JSON response
+            const resultsList = document.getElementById('resultsList');
+            let htmlContent = '<div class="plan-grid" style="display: grid; gap: 1rem; margin-top: 1rem;">';
+
+            data.plan.forEach(item => {
+                htmlContent += `
+                <div class="plan-card" style="padding: 1rem; border: 1px solid var(--border); border-radius: 8px; background: #f9fafb;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <strong>Student ${item.student}</strong>
+                        <span class="badge" style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">
+                            Diff: ${item.difficulty}/10
+                        </span>
+                    </div>
+                    <p style="margin: 8px 0; color: var(--text-main);">${item.task}</p>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">
+                        📅 Internal Deadline: ${item.deadline}
+                    </div>
+                </div>`;
+            });
+
+            htmlContent += '</div>';
+            resultsList.innerHTML = htmlContent;
+
+            // Show the final container
+            document.getElementById('resultsContainer').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Something went wrong processing your request.");
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('inputForm').style.display = 'block';
+        });
     });
 
     function handleFileSelect(event) {
@@ -116,29 +155,13 @@
         document.getElementById('images').files = dataTransfer.files;
     }
 
-    function deleteFromServer(filePath, elementId) {
-        if (confirm('Delete this image?')) {
-            fetch('/delete_image', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ path: filePath })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById(elementId).remove();
-                } else {
-                    alert('Error deleting image: ' + data.error);
-                }
-            });
-        }
+    function resetForm() {
+        document.getElementById('resultsContainer').style.display = 'none';
+        document.getElementById('inputForm').style.display = 'block';
+        document.getElementById('projectForm').reset();
+        document.getElementById('previewContainer').innerHTML = '';
+        selectedFiles = [];
     }
-
-    function resetForm() { 
-        window.location.href = "/"; 
-    } 
 </script>
 </body>
 </html>

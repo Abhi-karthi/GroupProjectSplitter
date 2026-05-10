@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from flask_moment import Moment
-import google.generativeai as genai # 1. Import the library
-from PIL import Image # For handling image uploads
+import google.generativeai as genai
+from PIL import Image
 
 app_path = os.path.join(os.path.dirname(__file__), '.')
 dotenv_path = os.path.join(app_path, '.env')
@@ -37,9 +37,7 @@ def main_page():
 
         # Safety check: make sure num_people exists and is a number
         if not num_people or not num_people.isdigit() or int(num_people) < 1:
-            return render_template("index.html", error="Please enter a valid number of people.")
-        if int(num_people) < 1:
-            return render_template("index.html", error="You need at least one person!")
+            return jsonify({"error": "Please enter a valid number of people."}), 400
 
         uploaded_files = request.files.getlist("images")
         file_paths = []
@@ -79,13 +77,13 @@ def main_page():
             raw_text = response.text.replace('```json', '').replace('```', '').strip()
             project_plan = json.loads(raw_text)
 
-            return render_template("index.html",
-                                   success=True,
-                                   file_paths=file_paths,
-                                   plan=project_plan['plan'])
+            # Return JSON directly to the frontend fetch request
+            return jsonify({"success": True, "plan": project_plan['plan']})
         except Exception as e:
             print(f"Error: {e}")
-            return render_template("index.html", error="Failed to process project.")
+            return jsonify({"error": "Failed to process project."}), 500
+
+    # For a standard GET request, just load the page
     return render_template("index.html")
 
 
@@ -104,6 +102,7 @@ def delete_image():
         except Exception as e:
             return jsonify({'success': False, 'error': str(e)}), 500
     return jsonify({'success': False, 'error': 'File not found'}), 404
+
 
 if __name__ == '__main__':
     app.run(port=2423)
