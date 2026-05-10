@@ -29,13 +29,15 @@ model = genai.GenerativeModel('gemini-3.1-flash-lite')
 
 @app.route('/', methods=["GET", "POST"])
 def main_page():
-    if request.method == "GET":
-        return render_template("index.html")
-    else:
+    # Only run the AI logic if it's actually a POST request
+    if request.method == "POST":
         instructions = request.form.get("instructions")
         deadline = request.form.get("date")
         num_people = request.form.get("number")
 
+        # Safety check: make sure num_people exists and is a number
+        if not num_people or not num_people.isdigit() or int(num_people) < 1:
+            return render_template("index.html", error="Please enter a valid number of people.")
         if int(num_people) < 1:
             return render_template("index.html", error="You need at least one person!")
 
@@ -84,6 +86,9 @@ def main_page():
         except Exception as e:
             print(f"Error: {e}")
             return render_template("index.html", error="Failed to process project.")
+    return render_template("index.html")
+
+
 @app.route('/delete_image', methods=['POST'])
 def delete_image():
     data = request.json
