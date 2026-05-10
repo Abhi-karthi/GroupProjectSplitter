@@ -15,6 +15,11 @@
     <h1>Project Splitter</h1>
     <p class="subtitle">Fairly distribute work in seconds.</p>
 
+    <div id="loadingState" style="display: none; text-align: center; padding: 40px;">
+        <div class="spinner"></div> <h2 style="margin-top: 20px;">Analyzing Project...</h2>
+        <p>Gemini is splitting the workload. This usually takes 5-10 seconds.</p>
+    </div>
+
     <div id="inputForm" {% if success %}style="display: none;"{% endif %}>
         <form method="post" enctype="multipart/form-data" id="projectForm">
             <div class="form-group">
@@ -43,24 +48,26 @@
         </form>
     </div>
 
-    <div id="output" class="{% if success %}output-visible{% endif %}">
-        <h3 style="margin-bottom: 16px;">Assigned Plan:</h3>
-        <div id="resultsList"></div>
-        {% if file_paths %} 
-        <div id="uploadedImages" style="margin-top: 16px;"> 
-            <h4 style="margin-bottom: 8px;">Attached Images:</h4> 
-            <div style="display: flex; gap: 12px; flex-wrap: wrap;"> 
-                {% for path in file_paths %} 
-                <div class="uploaded-image-wrapper" id="img-{{ loop.index }}">
-                    <img src="{{ url_for('static', filename=path.split('static/')[1]) }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border);">
-                    <button class="delete-btn" onclick="deleteFromServer('{{ path }}', 'img-{{ loop.index }}')">×</button>
-                </div>
-                {% endfor %} 
-            </div> 
-        </div> 
-        {% endif %}
-        <button style="background: var(--text-muted); margin-top: 24px;" onclick="resetForm()">Start Over</button>
+    <div id="resultsList">
+    {% if plan %}
+    <div class="plan-grid" style="display: grid; gap: 1rem; margin-top: 1rem;">
+        {% for item in plan %}
+        <div class="plan-card" style="padding: 1rem; border: 1px solid var(--border); border-radius: 8px; background: #f9fafb;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong>Student {{ item.student }}</strong>
+                <span class="badge" style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">
+                    Diff: {{ item.difficulty }}/10
+                </span>
+            </div>
+            <p style="margin: 8px 0; color: var(--text-main);">{{ item.task }}</p>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">
+                📅 Internal Deadline: {{ item.deadline }}
+            </div>
+        </div>
+        {% endfor %}
     </div>
+    {% endif %}
+</div>
 </div>
 
 <script> 
