@@ -36,6 +36,9 @@ def main_page():
         deadline = request.form.get("date")
         num_people = request.form.get("number")
 
+        if int(num_people) < 1:
+            return render_template("index.html", error="You need at least one person!")
+
         uploaded_files = request.files.getlist("images")
         file_paths = []
         gemini_images = []  # Images formatted for the API
@@ -98,4 +101,4 @@ def delete_image():
     return jsonify({'success': False, 'error': 'File not found'}), 404
 
 if __name__ == '__main__':
-    app.run(port=2423, debug=True)
+    app.run(port=2423)
